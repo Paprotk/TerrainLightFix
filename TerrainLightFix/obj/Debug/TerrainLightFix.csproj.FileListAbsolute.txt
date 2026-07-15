@@ -1,0 +1,8 @@
+C:\Users\Arek\RiderProjects\TerrainLightFix\TerrainLightFix\bin\Debug\Arro.TerrainLightFix.dll
+C:\Users\Arek\RiderProjects\TerrainLightFix\TerrainLightFix\bin\Debug\Arro.TerrainLightFix.pdb
+C:\Users\Arek\RiderProjects\TerrainLightFix\TerrainLightFix\obj\Debug\TerrainLightFix.csproj.AssemblyReference.cache
+C:\Users\Arek\RiderProjects\TerrainLightFix\TerrainLightFix\obj\Debug\TerrainLightFix.csproj.CoreCompileInputs.cache
+C:\Users\Arek\RiderProjects\TerrainLightFix\TerrainLightFix\obj\Debug\Arro.TerrainLightFix.dll
+C:\Users\Arek\RiderProjects\TerrainLightFix\TerrainLightFix\obj\Debug\Arro.TerrainLightFix.pdb
+C:\Users\Arek\RiderProjects\TerrainLightFix\TerrainLightFix\bin\Debug\MonoPatcher.dll
+C:\Users\Arek\RiderProjects\TerrainLightFix\TerrainLightFix\obj\Debug\TerrainL.DA65C3F4.Up2Date
