@@ -50,9 +50,29 @@ namespace Arro.tlmf
 			{
 				LotManager.ActiveLot.SetDisplayLevel(currentLotDisplayLevel - 1);
 			}
-			else //empty lot
+			else //Empty lot
 			{
-				
+				var lot = LotManager.ActiveLot;
+				var center = lot.GetCenterPosition();
+
+				var key = new ResourceKey(
+					0x00000500UL, //3
+					0x319e4f1dU, //1
+					0x00000000U //2
+				);
+
+				var obj = GlobalFunctions.CreateObject(
+					key,
+					center,
+					0,
+					Vector3.UnitZ
+				);
+				obj.SetOpacity(0, 0f);
+				if (obj is LightGameObject light)
+				{
+					light.SwitchLight(false, false);
+				}
+				Simulator.AddObject(new OneShotFunctionTask(() => {obj.Destroy();}, StopWatch.TickStyles.Seconds, 1f));
 			}
 			Simulator.AddObject(new OneShotFunctionTask(() => {LotManager.ActiveLot.SetDisplayLevel(currentLotDisplayLevel);}, StopWatch.TickStyles.Seconds, 0.1f));
 		}
@@ -62,7 +82,7 @@ namespace Arro.tlmf
 		{
 			public override bool Run()
 			{
-				LightGameObject.TurnOff.Definition definition =
+				var definition =
 					InteractionDefinition as LightGameObject.TurnOff.Definition;
 				if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisLight)
 				{
@@ -90,7 +110,7 @@ namespace Arro.tlmf
 		{
 			public override bool Run()
 			{
-				LightGameObject.TurnOn.Definition definition = InteractionDefinition as LightGameObject.TurnOn.Definition;
+				var definition = InteractionDefinition as LightGameObject.TurnOn.Definition;
 				if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisLight)
 				{
 					Target.SwitchLight(true, true);
