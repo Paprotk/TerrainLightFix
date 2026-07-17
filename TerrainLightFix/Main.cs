@@ -6,144 +6,259 @@ using Sims3.Gameplay.Actors;
 using Sims3.Gameplay.Core;
 using Sims3.Gameplay.Interactions;
 using Sims3.Gameplay.Interfaces;
+using Sims3.Gameplay.Utilities;
 using Sims3.SimIFace;
+using Sims3.UI;
+using OneShotFunctionTask = Sims3.Gameplay.OneShotFunctionTask;
 
 
 namespace Arro.tlmf
 {
-	[Plugin]
-	public class Main
-	{
-		[Tunable]
-        public static bool kInstantiator = false;
-		
-		static Main()
-		{
-			World.sOnWorldLoadFinishedEventHandler += OnWorldLoadFinished;
-		}
+    [Plugin]
+    public class Main
+    {
+        [Tunable] public static bool kInstantiator = false;
 
-		private static void OnWorldLoadFinished(object sender, EventArgs e)
-		{
-			World.LoadHeightMapRelatedData(true); // IDK why it works <pineapple emoji>
-			Simulator.AddObject(new OneShotFunctionTask(RefreshTerrainLightmap, StopWatch.TickStyles.Seconds, 5f));
-		}
-		
-		public static void RefreshTerrainLightmap()
-		{
-			var cameraPosition =  CameraController.GetPosition();
-			var cameraTarget = CameraController.GetTarget();
-			CameraController.Instance.EnableMapViewMode(0.0001f);
-			Simulator.AddObject(new OneShotFunctionTask(() => {CameraController.SetPositionAndTarget(cameraPosition, cameraTarget);}, StopWatch.TickStyles.Seconds, 0.1f));
-		}
+        static Main()
+        {
+            World.sOnWorldLoadFinishedEventHandler += OnWorldLoadFinished;
+        }
 
-		public static void RefreshLotLightmap()
-		{
-			var currentLotDisplayLevel = LotManager.ActiveLot.CurrentLotDisplayLevel;
-			var canDisplayLevelUp = LotManager.ActiveLot.CanLevelUp(false);
-			var canDisplayLevelDown = LotManager.ActiveLot.CanLevelDown(false);
-			
-			if (canDisplayLevelUp)
-			{
-				LotManager.ActiveLot.SetDisplayLevel(currentLotDisplayLevel + 1);
-			}
-			else if (canDisplayLevelDown)
-			{
-				LotManager.ActiveLot.SetDisplayLevel(currentLotDisplayLevel - 1);
-			}
-			else //Empty lot
-			{
-				var lot = LotManager.ActiveLot;
-				var center = lot.GetCenterPosition();
+        private static void OnWorldLoadFinished(object sender, EventArgs e)
+        {
+            World.LoadHeightMapRelatedData(true); // IDK why it works <pineapple emoji>
+            Simulator.AddObject(new OneShotFunctionTask(RefreshTerrainLightmap, StopWatch.TickStyles.Seconds, 5f));
+        }
 
-				var key = new ResourceKey(
-					0x00000500UL, //3
-					0x319e4f1dU, //1
-					0x00000000U //2
-				);
+        public static void RefreshTerrainLightmap()
+        {
+            FrameOverlay.Show();
+            var cameraPosition = CameraController.GetPosition();
+            var cameraTarget = CameraController.GetTarget();
+            //refreshCamPos.y  = cameraTarget.y + 1000f;
+            CameraController.Instance.EnableMapViewMode(0.0001f);
+            Simulator.AddObject(new OneShotFunctionTask(
+                () => {
+                    CameraController.SetPositionAndTarget(cameraPosition, cameraTarget);
+                    FrameOverlay.Hide();
+                },
+                StopWatch.TickStyles.Seconds, 0.1f));
+        }
 
-				var obj = GlobalFunctions.CreateObject(
-					key,
-					center,
-					0,
-					Vector3.UnitZ
-				);
-				obj.SetOpacity(0, 0f);
-				if (obj is LightGameObject light)
-				{
-					light.SwitchLight(false, false);
-				}
-				Simulator.AddObject(new OneShotFunctionTask(() => {obj.Destroy();}, StopWatch.TickStyles.Seconds, 1f));
-			}
-			Simulator.AddObject(new OneShotFunctionTask(() => {LotManager.ActiveLot.SetDisplayLevel(currentLotDisplayLevel);}, StopWatch.TickStyles.Seconds, 0.1f));
-		}
+        public static void RefreshLotLightmap()
+        {
+            var lot = LotManager.ActiveLot;
+            var center = lot.GetCenterPosition();
 
-		[TypePatch(typeof(Sims3.Gameplay.Abstracts.LightGameObject.TurnOff))]
-		public class TurnOff : ImmediateInteraction<Sim, IUserControlledLight>
-		{
-			public override bool Run()
-			{
-				var definition =
-					InteractionDefinition as LightGameObject.TurnOff.Definition;
-				if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisLight)
-				{
-					Target.SwitchLight(false, true);
-				}
-				else if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisRoom)
-				{
-					Target.SwitchLightsInRoom(false, true);
-				}
-				else if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisHouse)
-				{
-					Target.SwitchLightsInHouse(false, true);
-				}
+            var key = new ResourceKey(
+                0x00000500UL, //3
+                0x319e4f1dU, //1
+                0x00000000U //2
+            );
 
-				if (Target.RoomId == 0)
-				{
-					RefreshTerrainLightmap();
-				}
-				return true;
-			}
-		}
-		
-		[TypePatch(typeof(Sims3.Gameplay.Abstracts.LightGameObject.TurnOn))]
-		public class TurnOn : ImmediateInteraction<Sim, IUserControlledLight>
-		{
-			public override bool Run()
-			{
-				var definition = InteractionDefinition as LightGameObject.TurnOn.Definition;
-				if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisLight)
-				{
-					Target.SwitchLight(true, true);
-				}
-				else if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisRoom)
-				{
-					Target.SwitchLightsInRoom(true, true);
-				}
-				else if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisHouse)
-				{
-					Target.SwitchLightsInHouse(true, true);
-				}
-				if (Target.RoomId == 0)
-				{
-					RefreshTerrainLightmap();
-				}
-				return true;
-			}
-		}
-		
-		[TypePatch(typeof(Sims3.Gameplay.Abstracts.LightGameObject.ToggleOnOff))]
-		public class ToggleOnOff : ImmediateInteraction<IActor, LightGameObject>
-		{
-			public override bool Run()
-			{
-				Target.SwitchLight(!Target.IsLightOn(), false);
-				if (Target.RoomId == 0)
-				{
-					RefreshTerrainLightmap();
-					RefreshLotLightmap();
-				}
-				return true;
-			}
-		}
-	}
+            var obj = GlobalFunctions.CreateObject(
+                key,
+                center,
+                0,
+                Vector3.UnitZ
+            );
+            obj.SetOpacity(0, 0f);
+            if (obj is LightGameObject light)
+            {
+                light.SwitchLight(false, false);
+            }
+
+            Simulator.AddObject(new OneShotFunctionTask(() => { obj.Destroy(); }, StopWatch.TickStyles.Seconds, 1f));
+        }
+
+        [TypePatch(typeof(Sims3.Gameplay.Abstracts.LightGameObject.TurnOff))]
+        public class TurnOff : ImmediateInteraction<Sim, IUserControlledLight>
+        {
+            public override bool Run()
+            {
+                var definition =
+                    InteractionDefinition as LightGameObject.TurnOff.Definition;
+                if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisLight)
+                {
+                    Target.SwitchLight(false, true);
+                }
+                else if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisRoom)
+                {
+                    Target.SwitchLightsInRoom(false, true);
+                }
+                else if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisHouse)
+                {
+                    Target.SwitchLightsInHouse(false, true);
+                }
+
+                if (definition != null && (Target.RoomId == 0 || definition.TargetLights == LightGameObject.LightsToChange.ThisHouse))
+                {
+                    RefreshTerrainLightmap();
+                }
+
+                return true;
+            }
+        }
+
+        [TypePatch(typeof(Sims3.Gameplay.Abstracts.LightGameObject.TurnOn))]
+        public class TurnOn : ImmediateInteraction<Sim, IUserControlledLight>
+        {
+            public override bool Run()
+            {
+                var definition = InteractionDefinition as LightGameObject.TurnOn.Definition;
+                if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisLight)
+                {
+                    Target.SwitchLight(true, true);
+                }
+                else if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisRoom)
+                {
+                    Target.SwitchLightsInRoom(true, true);
+                }
+                else if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisHouse)
+                {
+                    Target.SwitchLightsInHouse(true, true);
+                }
+
+                if (definition != null && (Target.RoomId == 0 || definition.TargetLights == LightGameObject.LightsToChange.ThisHouse))
+                {
+                    RefreshTerrainLightmap();
+                }
+
+                return true;
+            }
+        }
+
+        [TypePatch(typeof(Sims3.Gameplay.Abstracts.LightGameObject.ToggleOnOff))]
+        public class ToggleOnOff : ImmediateInteraction<IActor, LightGameObject>
+        {
+            public override bool Run()
+            {
+                Target.SwitchLight(!Target.IsLightOn(), false);
+                if (Target.RoomId == 0)
+                {
+                    RefreshTerrainLightmap();
+                    RefreshLotLightmap();
+                }
+                return true;
+            }
+        }
+
+        [TypePatch(typeof(Sims3.Gameplay.Abstracts.LightGameObject.SetColor))]
+        public class SetColor : ImmediateInteraction<Sim, ILight>
+        {
+            public override bool Run()
+            {
+                LightGameObject.SetColor.Definition definition = InteractionDefinition as LightGameObject.SetColor.Definition;
+                if (definition != null && definition.TargetColor == LightGameObject.LightColor.CustomColor)
+                {
+                    Vector3 vector = new Vector3(Target.CustomColorRed, Target.CustomColorGreen, Target.CustomColorBlue);
+                    LightGameObject.GetCustomColorVec(ref vector);
+                    Target.CustomColorRed = vector.x;
+                    Target.CustomColorGreen = vector.y;
+                    Target.CustomColorBlue = vector.z;
+                }
+
+                if (definition != null)
+                {
+                    switch (definition.TargetLights)
+                    {
+                        case LightGameObject.LightsToChange.ThisLight:
+                            LightGameObject.SetColorLight(Target, definition.TargetColor);
+                            break;
+                        case LightGameObject.LightsToChange.ThisRoom:
+                            LightGameObject.SetColorRoom(Target, definition.TargetColor);
+                            break;
+                        case LightGameObject.LightsToChange.ThisHouse:
+                            LightGameObject.SetColorHouse(Target, definition.TargetColor);
+                            break;
+                    }
+
+                    if (Target.RoomId == 0 || definition.TargetLights == LightGameObject.LightsToChange.ThisHouse)
+                    {
+                        RefreshTerrainLightmap();
+                        if (!GameStates.IsLiveState)
+                        {
+                            RefreshLotLightmap();
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+        
+        [TypePatch(typeof(Sims3.Gameplay.Abstracts.LightGameObject.SetIntensity))]
+        public class SetIntensity : ImmediateInteraction<Sim, LightGameObject>
+        {
+            public override bool Run()
+            {
+                LightGameObject.SetIntensity.Definition definition =
+                    InteractionDefinition as LightGameObject.SetIntensity.Definition;
+                if (definition != null && definition.TargetIntensity == LightGameObject.LightIntensity.CustomIntensity)
+                {
+                    Target.mCustomIntensity = ParserFunctions.ParseFloat(StringInputDialog.Show(
+                            LightGameObject.LocalizeString("SettingCustomIntensity", new object[0]),
+                            LightGameObject.LocalizeString("CustomIntensityDialog", new object[]
+                            {
+                                LightGameObject.kIntensityMaxCustomValue.ToString()
+                            }), Target.mCustomIntensity.ToString(), StringInputDialog.Validation.FloatNumber),
+                        LightGameObject.kIntensityNormal);
+                    if (Target.mCustomIntensity < 0f)
+                    {
+                        Target.mCustomIntensity = 0f;
+                    }
+                    else if (Target.mCustomIntensity > LightGameObject.kIntensityMaxCustomValue)
+                    {
+                        Target.mCustomIntensity = LightGameObject.kIntensityMaxCustomValue;
+                    }
+                }
+
+                if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisLight)
+                {
+                    Target.SetLightIntensity(definition.TargetIntensity);
+                }
+                else if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisRoom)
+                {
+                    Target.SetIntensityRoom(definition.TargetIntensity);
+                }
+                else if (definition != null && definition.TargetLights == LightGameObject.LightsToChange.ThisHouse)
+                {
+                    Target.SetIntensityHouse(definition.TargetIntensity);
+                }
+                
+                if (definition != null && (Target.RoomId == 0 || definition.TargetLights == LightGameObject.LightsToChange.ThisHouse))
+                {
+                    RefreshTerrainLightmap();
+                    if (!GameStates.IsLiveState)
+                    {
+                        RefreshLotLightmap();
+                    }
+                }
+                return true;
+            }
+        }
+
+        [TypePatch(typeof(Sims3.Gameplay.Abstracts.LightGameObject.ToggleBlackLight))]
+        public class ToggleBlackLight : ImmediateInteraction<Sim, LightGameObject>
+        {
+            public override bool Run()
+            {
+                LightGameObject.ToggleBlackLight.Definition definition =
+                    InteractionDefinition as LightGameObject.ToggleBlackLight.Definition;
+                if (definition != null)
+                {
+                    Target.SetBlackLights(!Target.IsBlackLight, definition.TargetLights);
+
+                    if (Target.RoomId == 0 || definition.TargetLights == LightGameObject.LightsToChange.ThisHouse)
+                    {
+                        RefreshTerrainLightmap();
+                        if (!GameStates.IsLiveState)
+                        {
+                            RefreshLotLightmap();
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+    }
 }
