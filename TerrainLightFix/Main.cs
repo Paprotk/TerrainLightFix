@@ -1,9 +1,7 @@
 ﻿using System;
 using MonoPatcherLib;
-using Sims3.Gameplay;
 using Sims3.Gameplay.Abstracts;
 using Sims3.Gameplay.Actors;
-using Sims3.Gameplay.Core;
 using Sims3.Gameplay.Interactions;
 using Sims3.Gameplay.Interfaces;
 using Sims3.Gameplay.Utilities;
@@ -17,7 +15,7 @@ namespace Arro.tlmf
     [Plugin]
     public class Main
     {
-        [Tunable] public static bool kInstantiator = false;
+        public static ObjectGuid LightDummyTask;
 
         static Main()
         {
@@ -26,49 +24,13 @@ namespace Arro.tlmf
 
         private static void OnWorldLoadFinished(object sender, EventArgs e)
         {
-            World.LoadHeightMapRelatedData(true); // IDK why it works <pineapple emoji>
-            Simulator.AddObject(new OneShotFunctionTask(RefreshTerrainLightmap, StopWatch.TickStyles.Seconds, 5f));
+            Simulator.AddObject(new OneShotFunctionTask(RefreshTerrainLightmap, StopWatch.TickStyles.Seconds, 1f));
         }
 
         public static void RefreshTerrainLightmap()
         {
-            FrameOverlay.Show();
-            var cameraPosition = CameraController.GetPosition();
-            var cameraTarget = CameraController.GetTarget();
-            //refreshCamPos.y  = cameraTarget.y + 1000f;
-            CameraController.Instance.EnableMapViewMode(0.0001f);
-            Simulator.AddObject(new OneShotFunctionTask(
-                () => {
-                    CameraController.SetPositionAndTarget(cameraPosition, cameraTarget);
-                    FrameOverlay.Hide();
-                },
-                StopWatch.TickStyles.Seconds, 0.1f));
-        }
-
-        public static void RefreshLotLightmap()
-        {
-            var lot = LotManager.ActiveLot;
-            var center = lot.GetCenterPosition();
-
-            var key = new ResourceKey(
-                0x00000500UL, //3
-                0x319e4f1dU, //1
-                0x00000000U //2
-            );
-
-            var obj = GlobalFunctions.CreateObject(
-                key,
-                center,
-                0,
-                Vector3.UnitZ
-            );
-            obj.SetOpacity(0, 0f);
-            if (obj is LightGameObject light)
-            {
-                light.SwitchLight(false, false);
-            }
-
-            Simulator.AddObject(new OneShotFunctionTask(() => { obj.Destroy(); }, StopWatch.TickStyles.Seconds, 1f));
+            World.LoadHeightMapRelatedData(true);
+            LightDummyTask = Simulator.AddObject(new LightDummy());
         }
 
         [TypePatch(typeof(Sims3.Gameplay.Abstracts.LightGameObject.TurnOff))]
@@ -137,7 +99,6 @@ namespace Arro.tlmf
                 if (Target.RoomId == 0)
                 {
                     RefreshTerrainLightmap();
-                    RefreshLotLightmap();
                 }
                 return true;
             }
@@ -176,10 +137,6 @@ namespace Arro.tlmf
                     if (Target.RoomId == 0 || definition.TargetLights == LightGameObject.LightsToChange.ThisHouse)
                     {
                         RefreshTerrainLightmap();
-                        if (!GameStates.IsLiveState)
-                        {
-                            RefreshLotLightmap();
-                        }
                     }
                 }
                 return true;
@@ -228,10 +185,6 @@ namespace Arro.tlmf
                 if (definition != null && (Target.RoomId == 0 || definition.TargetLights == LightGameObject.LightsToChange.ThisHouse))
                 {
                     RefreshTerrainLightmap();
-                    if (!GameStates.IsLiveState)
-                    {
-                        RefreshLotLightmap();
-                    }
                 }
                 return true;
             }
@@ -251,10 +204,6 @@ namespace Arro.tlmf
                     if (Target.RoomId == 0 || definition.TargetLights == LightGameObject.LightsToChange.ThisHouse)
                     {
                         RefreshTerrainLightmap();
-                        if (!GameStates.IsLiveState)
-                        {
-                            RefreshLotLightmap();
-                        }
                     }
                 }
                 return true;
